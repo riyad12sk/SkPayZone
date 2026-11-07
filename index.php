@@ -9,10 +9,27 @@ $current_rates = file_exists($rate_file) ? json_decode(file_get_contents($rate_f
 
 $whatsapp_number = "8801700000000";
 $notice_text = "স্বাগতম SkPayZone-এ! নিরাপদে ২৪ ঘণ্টা অটোমেটিক কারেন্সি এক্সচেঞ্জ করুন।";
+
+$ticker_names_json = json_encode(["রহিম", "করিম", "ফাহিম", "সাকিব", "রিয়াদ", "তানভীর", "ইমরান"]);
+$ticker_actions_json = json_encode(["Epay USD বিক্রি করে বিকাশ নিলেন", "Epay USD এক্সচেঞ্জ করলেন", "নগদ দিয়ে Epay নিলেন"]);
+$ticker_interval_ms = 60000;
+
 if (file_exists($wallet_file)) {
     $wallets = json_decode(file_get_contents($wallet_file), true);
     if(isset($wallets['whatsapp'])) { $whatsapp_number = $wallets['whatsapp']; }
     if(isset($wallets['notice'])) { $notice_text = $wallets['notice']; }
+    
+    if(!empty($wallets['ticker_names'])) {
+        $names_arr = array_map('trim', explode(',', $wallets['ticker_names']));
+        $ticker_names_json = json_encode($names_arr);
+    }
+    if(!empty($wallets['ticker_actions'])) {
+        $actions_arr = array_map('trim', explode(',', $wallets['ticker_actions']));
+        $ticker_actions_json = json_encode($actions_arr);
+    }
+    if(isset($wallets['ticker_interval']) && (int)$wallets['ticker_interval'] > 0) {
+        $ticker_interval_ms = (int)$wallets['ticker_interval'] * 60000;
+    }
 }
 
 $orders = file_exists($order_file) ? json_decode(file_get_contents($order_file), true) : [];
@@ -59,10 +76,9 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
         .nav-links a.register { background: #10b981; }
         .lang-select { background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); padding: 5px; border-radius: 6px; font-size: 11px; cursor: pointer; }
 
-        /* হ্যামবার্গার মেনু (☰) */
         .menu-container { position: relative; display: flex; align-items: center; gap: 8px; }
         .hamburger { background: none; border: none; color: var(--text-color); font-size: 22px; cursor: pointer; padding: 0; }
-        .dropdown-menu { display: none; position: absolute; right: 0; top: 45px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 180px; overflow: hidden; z-index: 1100; }
+        .dropdown-menu { display: none; position: absolute; right: 0; top: 45px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 190px; overflow: hidden; z-index: 1100; }
         .dropdown-menu a, .dropdown-menu div { display: block; padding: 10px 15px; color: var(--text-color); text-decoration: none; font-size: 13px; border-bottom: 1px solid var(--border-color); cursor: pointer; }
         .dropdown-menu a:hover { background: #3b82f6; color: #fff; }
         .dropdown-menu.active { display: block; }
@@ -71,9 +87,11 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
         .hero-banner { background: linear-gradient(135deg, rgba(30,58,138,0.8), rgba(30,41,59,0.8)); color: white; text-align: center; padding: 20px; border-bottom: 2px solid rgba(59,130,246,0.5); }
         .whatsapp-btn { display: inline-block; background: #22c55e; color: white; padding: 6px 15px; text-decoration: none; border-radius: 30px; font-size: 13px; margin-top: 10px; font-weight: bold; }
 
-        .container { padding: 20px; max-width: 420px; margin: 20px auto; background: var(--card-bg); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
+        .rates-table-box { max-width: 420px; margin: 15px auto; background: var(--card-bg); padding: 12px 15px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 12px; display: flex; justify-content: space-around; text-align: center; }
+        .rate-item span { display: block; color: #38bdf8; font-weight: bold; font-size: 14px; margin-top: 3px; }
+
+        .container { padding: 20px; max-width: 420px; margin: 15px auto; background: var(--card-bg); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
         .container h3 { margin-top: 0; text-align: center; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; }
-        .rate-box { background: var(--input-bg); padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-size: 13px; font-weight: bold; color: #38bdf8; border: 1px dashed #38bdf8; }
         
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px; color: var(--text-color); }
@@ -84,8 +102,12 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
         @keyframes magicBorder { 0% { border-color: #ff0055; box-shadow: 0 0 15px #ff0055; } 33% { border-color: #00ffcc; box-shadow: 0 0 15px #00ffcc; } 66% { border-color: #ffff00; box-shadow: 0 0 15px #ffff00; } 100% { border-color: #ff0055; box-shadow: 0 0 15px #ff0055; } }
         .exchange-btn { display: block; width: 100%; padding: 13px; background: var(--bg-color); color: var(--text-color); border: 3px solid #ff0055; border-radius: 8px; text-align: center; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; animation: magicBorder 3s infinite; }
 
-        .latest-box { max-width: 420px; margin: 20px auto; background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); font-size: 12px; }
+        .latest-box { max-width: 420px; margin: 15px auto; background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); font-size: 12px; }
         .latest-item { display: flex; justify-content: space-between; background: var(--input-bg); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid var(--border-color); }
+
+        .trust-badges { max-width: 420px; margin: 15px auto; text-align: center; font-size: 11px; color: #94a3b8; background: var(--card-bg); padding: 10px; border-radius: 10px; border: 1px solid var(--border-color); }
+
+        #liveToast { position: fixed; bottom: 20px; left: 20px; background: rgba(15, 23, 42, 0.95); border: 1px solid #38bdf8; color: #fff; padding: 10px 15px; border-radius: 8px; font-size: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.4); z-index: 9999; display: none; transition: 0.5s; }
 
         .water-ripple { position: fixed; border-radius: 50%; border: 2px solid rgba(0, 255, 204, 0.8); background: rgba(255, 0, 85, 0.3); transform: scale(0); animation: waterRippleAnim 0.8s cubic-bezier(0, 0.2, 0.8, 1) forwards; pointer-events: none; z-index: 9999; }
         @keyframes waterRippleAnim { 0% { width: 0px; height: 0px; opacity: 1; transform: translate(-50%, -50%) scale(0); border-color: #00ffcc; background: rgba(255, 0, 85, 0.4); } 50% { border-color: #ffff00; background: rgba(0, 255, 204, 0.2); } 100% { width: 180px; height: 180px; opacity: 0; transform: translate(-50%, -50%) scale(1); border-color: #ff0055; background: rgba(255, 255, 0, 0); } }
@@ -114,6 +136,7 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
                 <button class="hamburger" onclick="toggleMenu()">☰</button>
                 <div id="dropdownMenu" class="dropdown-menu">
                     <div style="font-weight:bold; color:#38bdf8; border-bottom:1px solid var(--border-color);">👤 <?php echo htmlspecialchars($user_name); ?></div>
+                    <a href="dashboard.php">⚙️ ইউজার ড্যাশবোর্ড</a>
                     <a href="history.php">📜 এক্সচেঞ্জ হিস্ট্রি</a>
                     <div onclick="toggleTheme()" id="themeToggleText">☀️ Light Mode</div>
                     <a href="logout.php" style="color: #f87171;">🚪 লগআউট</a>
@@ -132,23 +155,24 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
         <a href="https://wa.me/<?php echo $whatsapp_number; ?>" target="_blank" class="whatsapp-btn">💬 WhatsApp সাপোর্ট</a>
     </div>
 
+    <div class="rates-table-box">
+        <div class="rate-item">ডলার কিনবেন (Buy) <span><?php echo $current_rates['buy_rate']; ?> ৳</span></div>
+        <div style="border-left: 1px solid var(--border-color);"></div>
+        <div class="rate-item">ডলার বিক্রি করবেন (Sell) <span><?php echo $current_rates['sell_rate']; ?> ৳</span></div>
+    </div>
+
     <div class="container">
         <h3>এক্সচেঞ্জ ক্যালকুলেটর</h3>
-        <div class="rate-box">
-            ১ USD রেট: কেনা = <?php echo $current_rates['buy_rate']; ?>৳ | বিক্রি = <?php echo $current_rates['sell_rate']; ?>৳
-        </div>
         
         <form action="process.php" method="POST">
+            <!-- আপনি পাঠাবেন (Send) - Epay USD সবার উপরে এবং বাকি কারেন্সি -->
             <div class="form-group">
                 <label>আপনি পাঠাবেন (Send):</label>
                 <select id="sendCurrency" name="send_currency" onchange="updateCalculation()">
+                    <option value="Epay USD" selected>Epay USD</option>
                     <option value="Binance USDT">Binance USDT</option>
                     <option value="Payeer USD">Payeer USD</option>
-                    <option value="Epay USD">Epay USD</option>
                     <option value="Tron (TRX)">Tron (TRX)</option>
-                    <option value="Bkash Personal">Bkash Personal</option>
-                    <option value="Nagad Personal">Nagad Personal</option>
-                    <option value="Rocket Personal">Rocket Personal</option>
                 </select>
             </div>
             
@@ -156,16 +180,14 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
                 <button type="button" class="swap-btn" onclick="swapCurrencies()" title="Swap">⇅</button>
             </div>
             
+            <!-- আপনি পাবেন (Receive) - শুধুমাত্র বিকাশ, নগদ, রকেট, উপায় -->
             <div class="form-group">
                 <label>আপনি পাবেন (Receive):</label>
                 <select id="receiveCurrency" name="receive_currency" onchange="updateCalculation()">
                     <option value="Bkash Personal" selected>Bkash Personal</option>
                     <option value="Nagad Personal">Nagad Personal</option>
                     <option value="Rocket Personal">Rocket Personal</option>
-                    <option value="Binance USDT">Binance USDT</option>
-                    <option value="Payeer USD">Payeer USD</option>
-                    <option value="Epay USD">Epay USD</option>
-                    <option value="Tron (TRX)">Tron (TRX)</option>
+                    <option value="Upay Personal">Upay Personal</option>
                 </select>
             </div>
             
@@ -179,6 +201,11 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
         </form>
     </div>
 
+    <div class="trust-badges">
+        🛡️ <b>100% সুরক্ষিত ও স্বয়ংক্রিয় লেনদেন সিস্টেম</b><br>
+        বিকাশ • নগদ • রকেট • উপায় পেমেন্ট গেটওয়ে সমর্থিত
+    </div>
+
     <div class="latest-box">
         <h4 style="margin:0 0 8px 0; color:#38bdf8; text-align:center;">🔄 Latest Exchanges (সাম্প্রতিক লেনদেন)</h4>
         <?php if(empty($latest_orders)): ?>
@@ -187,7 +214,7 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
             <?php foreach($latest_orders as $lo): ?>
                 <div class="latest-item">
                     <span><b><?php echo htmlspecialchars($lo['user_name']); ?></b>: <?php echo $lo['send_currency']; ?> ➔ <?php echo $lo['receive_currency']; ?></span>
-                    <span style="color:#34d399; font-weight:bold;"><?php echo $lo['status']; ?></span>
+                    <span style="color:<?php echo (strpos($lo['status'],'Completed')!==false)?'#34d399':((strpos($lo['status'],'Cancelled')!==false)?'#ef4444':'#f59e0b'); ?>; font-weight:bold;"><?php echo $lo['status']; ?></span>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
@@ -196,9 +223,20 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
         </div>
     </div>
 
+    <div id="liveToast"></div>
+
     <footer>&copy; 2026 SkPayZone. All Rights Reserved.</footer>
 
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let savedTheme = localStorage.getItem("sk_theme") || "dark";
+            document.body.setAttribute("data-theme", savedTheme);
+            let themeText = document.getElementById("themeToggleText");
+            if(themeText) {
+                themeText.innerText = savedTheme === "light" ? "🌙 Dark Mode" : "☀️ Light Mode";
+            }
+        });
+
         function toggleMenu() { document.getElementById("dropdownMenu").classList.toggle("active"); }
         
         function toggleTheme() {
@@ -206,9 +244,11 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
             let themeText = document.getElementById("themeToggleText");
             if(body.getAttribute("data-theme") === "dark") {
                 body.setAttribute("data-theme", "light");
+                localStorage.setItem("sk_theme", "light");
                 themeText.innerText = "🌙 Dark Mode";
             } else {
                 body.setAttribute("data-theme", "dark");
+                localStorage.setItem("sk_theme", "dark");
                 themeText.innerText = "☀️ Light Mode";
             }
         }
@@ -222,6 +262,22 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
             setTimeout(() => { ripple.remove(); }, 800);
         });
 
+        const fakeUsers = <?php echo $ticker_names_json; ?>;
+        const fakeActions = <?php echo $ticker_actions_json; ?>;
+        const tickerInterval = <?php echo $ticker_interval_ms; ?>;
+
+        function showLiveToast() {
+            const toast = document.getElementById("liveToast");
+            if(!fakeUsers.length || !fakeActions.length) return;
+            let randomUser = fakeUsers[Math.floor(Math.random() * fakeUsers.length)];
+            let randomAction = fakeActions[Math.floor(Math.random() * fakeActions.length)];
+            toast.innerHTML = `🔔 <b>${randomUser}</b> এই মাত্র ${randomAction}!`;
+            toast.style.display = "block";
+            setTimeout(() => { toast.style.display = "none"; }, 5000);
+        }
+        
+        setInterval(showLiveToast, tickerInterval);
+
         const buyRate = <?php echo $current_rates['buy_rate']; ?>;
         const sellRate = <?php echo $current_rates['sell_rate']; ?>;
         function swapCurrencies() {
@@ -234,11 +290,8 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
             var sendVal = document.getElementById("sendCurrency").value;
             var resultDiv = document.getElementById("resultText");
             if(amount === "" || amount <= 0) { resultDiv.innerHTML = ""; return; }
-            if(['Binance USDT', 'Payeer USD', 'Epay USD', 'Tron (TRX)'].includes(sendVal)) {
-                resultDiv.innerHTML = "আপনি পাবেন আনুমানিক: " + (amount * sellRate).toFixed(2) + " ৳";
-            } else {
-                resultDiv.innerHTML = "আপনি পাবেন আনুমানিক: " + (amount / buyRate).toFixed(2) + " USD";
-            }
+            // Epay, Binance, Payeer বা TRX পাঠালে টাকায় কনভার্ট হবে
+            resultDiv.innerHTML = "আপনি পাবেন আনুমানিক: " + (amount * sellRate).toFixed(2) + " ৳";
         }
     </script>
 </body>
