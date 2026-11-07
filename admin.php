@@ -5,9 +5,15 @@ $wallet_file = "wallets.json";
 $order_file = "orders.json";
 $user_file = "users.json";
 
-$admin_email = "skriyad01967@gmail.com";
-$admin_pass = "Skriyad@5566";
+// আলাদা নিরাপদ config.php ফাইল থেকে জিমেইল ও পাসওয়ার্ড লোড করা হচ্ছে (কোডের ভেতর দেখা যাবে না)
+$config = include('config.php');
+$admin_email = $config['admin_email'] ?? '';
+$admin_pass  = $config['admin_pass'] ?? '';
+
 $msg = ""; $error = "";
+
+// বর্তমান ফাইলের নামটি স্বয়ংক্রিয়ভাবে ডিটেক্ট করা, যাতে 404 ইরর না আসে
+$current_page = basename($_SERVER['PHP_SELF']);
 
 if (isset($_POST['login'])) {
     if ($_POST['email'] === $admin_email && $_POST['password'] === $admin_pass) {
@@ -16,7 +22,7 @@ if (isset($_POST['login'])) {
         $error = "ভুল ইমেইল অথবা পাসওয়ার্ড!";
     }
 }
-if (isset($_GET['logout'])) { unset($_SESSION['admin_logged']); header("Location: sk-bot-pay.php"); exit(); }
+if (isset($_GET['logout'])) { unset($_SESSION['admin_logged']); header("Location: " . $current_page); exit(); }
 
 if (isset($_SESSION['admin_logged']) && isset($_GET['action']) && isset($_GET['id'])) {
     $orders = file_exists($order_file) ? json_decode(file_get_contents($order_file), true) : [];
@@ -27,7 +33,7 @@ if (isset($_SESSION['admin_logged']) && isset($_GET['action']) && isset($_GET['i
         }
     }
     file_put_contents($order_file, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    header("Location: sk-bot-pay.php"); exit();
+    header("Location: " . $current_page); exit();
 }
 
 $current_rates = file_exists($rate_file) ? json_decode(file_get_contents($rate_file), true) : ['buy_rate' => 122.00, 'sell_rate' => 125.00];
@@ -114,7 +120,7 @@ $total_users = count($users);
             <a href="index.php" style="display:block; text-align:center; margin-top:15px; color:#38bdf8; text-decoration:none;">← হোম পেজে ফিরে যান</a>
         <?php else: ?>
             <h2>⚙️ Sk Bot Pay Control Panel</h2>
-            <div style="text-align: right; margin-bottom: 15px;"><a href="sk-bot-pay.php?logout=true" style="color: #f87171; font-size: 12px; text-decoration: none; font-weight: bold;">লগআউট 🚪</a></div>
+            <div style="text-align: right; margin-bottom: 15px;"><a href="<?php echo $current_page; ?>?logout=true" style="color: #f87171; font-size: 12px; text-decoration: none; font-weight: bold;">লগআউট 🚪</a></div>
             
             <!-- আন্তর্জাতিক লাইভ ডলার রেট বক্স -->
             <div class="live-rate-box">
@@ -205,8 +211,8 @@ $total_users = count($users);
                         </td>
                         <td><b style="color:#38bdf8;"><?php echo $ord['status'] ?? ''; ?></b></td>
                         <td>
-                            <a href="sk-bot-pay.php?action=complete&id=<?php echo $ord['id'] ?? ''; ?>" class="action-btn complete-btn">Complete</a>
-                            <a href="sk-bot-pay.php?action=cancel&id=<?php echo $ord['id'] ?? ''; ?>" class="action-btn cancel-btn">Cancel</a>
+                            <a href="<?php echo $current_page; ?>?action=complete&id=<?php echo $ord['id'] ?? ''; ?>" class="action-btn complete-btn">Complete</a>
+                            <a href="<?php echo $current_page; ?>?action=cancel&id=<?php echo $ord['id'] ?? ''; ?>" class="action-btn cancel-btn">Cancel</a>
                         </td>
                     </tr>
                     <?php endforeach; ?>
