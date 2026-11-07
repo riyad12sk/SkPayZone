@@ -1,5 +1,11 @@
 <?php
 session_start();
+
+// বটের আক্রমণ রুখতে শক্তিশালী ইউনিক টোকেন জেনারেট করা
+if (empty($_SESSION['bot_token'])) {
+    $_SESSION['bot_token'] = bin2hex(random_bytes(32));
+}
+
 $rate_file = "rates.json";
 $wallet_file = "wallets.json";
 $order_file = "orders.json";
@@ -165,7 +171,15 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
         <h3>এক্সচেঞ্জ ক্যালকুলেটর</h3>
         
         <form action="process.php" method="POST">
-            <!-- আপনি পাঠাবেন (Send) - Epay USD সবার উপরে এবং বাকি কারেন্সি -->
+            <!-- বটের আক্রমণ ঠেকাতে সিকিউরিটি টোকেন -->
+            <input type="hidden" name="bot_token" value="<?php echo $_SESSION['bot_token']; ?>">
+
+            <!-- হানিপট ফিল্ড: সাধারণ মানুষ এটি দেখতে পাবে না, কিন্তু বট দেখলে ফিলাপ করবে এবং ধরা খেয়ে ব্লক হবে -->
+            <div style="display:none;">
+                <label>Website URL (Leave blank):</label>
+                <input type="text" name="website_url" value="">
+            </div>
+
             <div class="form-group">
                 <label>আপনি পাঠাবেন (Send):</label>
                 <select id="sendCurrency" name="send_currency" onchange="updateCalculation()">
@@ -180,7 +194,6 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
                 <button type="button" class="swap-btn" onclick="swapCurrencies()" title="Swap">⇅</button>
             </div>
             
-            <!-- আপনি পাবেন (Receive) - শুধুমাত্র বিকাশ, নগদ, রকেট, উপায় -->
             <div class="form-group">
                 <label>আপনি পাবেন (Receive):</label>
                 <select id="receiveCurrency" name="receive_currency" onchange="updateCalculation()">
@@ -203,7 +216,7 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
 
     <div class="trust-badges">
         🛡️ <b>100% সুরক্ষিত ও স্বয়ংক্রিয় লেনদেন সিস্টেম</b><br>
-        বিকাশ • নগদ • রকেট • উপায় পেমেন্ট গেটওয়ে সমর্থিত
+        বিকাশ • নগদ • উপায় পেমেন্ট গেটওয়ে সমর্থিত
     </div>
 
     <div class="latest-box">
@@ -287,10 +300,8 @@ $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
         }
         function updateCalculation() {
             var amount = document.getElementById("amount").value;
-            var sendVal = document.getElementById("sendCurrency").value;
             var resultDiv = document.getElementById("resultText");
             if(amount === "" || amount <= 0) { resultDiv.innerHTML = ""; return; }
-            // Epay, Binance, Payeer বা TRX পাঠালে টাকায় কনভার্ট হবে
             resultDiv.innerHTML = "আপনি পাবেন আনুমানিক: " + (amount * sellRate).toFixed(2) + " ৳";
         }
     </script>
