@@ -1,5 +1,24 @@
 <?php
 session_start();
+
+// বটের আক্রমণ ও সরাসরি প্রবেশ রোধ করতে সিকিউরিটি চেক
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // হানিপট ফিল্ড চেক (বট ধরা পড়ার জন্য)
+    if (!empty($_POST['website_url'])) {
+        die("Access Denied: Bot detected!");
+    }
+
+    // সিকিউরিটি টোকেন ভেরিফিকেশন
+    if (!isset($_POST['bot_token']) || !isset($_SESSION['bot_token']) || $_POST['bot_token'] !== $_SESSION['bot_token']) {
+        die("Security Error: Invalid Token! Please go back and try again.");
+    }
+} else {
+    // সরাসরি কেউ লিংক দিয়ে ঢুকলে হোমপেজে পাঠিয়ে দেওয়া
+    header("Location: index.php");
+    exit();
+}
+
+// লগইন চেক
 if (!isset($_SESSION['user_logged']) || $_SESSION['user_logged'] !== true) {
     echo "<script>alert('দয়া করে প্রথমে লগইন বা সাইন আপ করুন!'); window.location.href='login.php';</script>";
     exit();
@@ -62,7 +81,7 @@ $order_id = "SK-" . strtoupper(substr(uniqid(), -6));
         </div>
 
         <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 12px; color: #fbbf24;">
-            <b>নির্দেশনা:</b> নিচের অ্যাকাউন্টে আপনার পরিমাণ টাকা বা ডলার পাঠিয়ে দিন।<br><br>
+            <b>নির্দেশনা:</b> নিচের অ্যাকাউন্টে আপনার পরিমাণ টাকা বা ডলার পাঠিয়ে দিন。<br><br>
             <b>আমাদের ওয়ালেট/নম্বর (কপি করুন):</b>
             <div class="wallet-box-flex">
                 <span id="walletAddress" class="wallet-text"><?php echo htmlspecialchars($target_wallet); ?></span>
